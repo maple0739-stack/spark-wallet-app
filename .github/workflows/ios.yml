@@ -73,6 +73,10 @@ jobs:
           source = source.replace("require('crypto')", 'global.crypto')
           source = source.replace("require('react-native-crypto')", 'global.crypto')
           numbers.write_text(source)
+          xhr = Path('node_modules/xhr2-cookies/dist/xml-http-request.js')
+          if not xhr.exists():
+              raise SystemExit('Missing xhr2-cookies entry')
+          xhr.write_text('Object.defineProperty(exports, "__esModule", { value: true });\nexports.XMLHttpRequest = global.XMLHttpRequest;\n')
           PY
       - uses: actions/cache/save@v4
         if: steps.npm-cache.outputs.cache-hit != 'true'
