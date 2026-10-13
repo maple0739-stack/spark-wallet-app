@@ -41,6 +41,15 @@ jobs:
               yoga.write_text(source.replace(old, 'node->getLayout().hadOverflow ||\n'))
           elif 'node->getLayout().hadOverflow ||' not in source:
               raise SystemExit('Unexpected Yoga.cpp layout overflow expression')
+          bridge = Path('node_modules/react-native/React/CxxBridge/RCTCxxBridge.mm')
+          source = bridge.read_text()
+          anchor = '- (void)batchDidComplete;\n'
+          declaration = ('- (NSArray<RCTModuleData *> *)_initializeModules:(NSArray<Class> *)modules\n'
+                         '                               withDispatchGroup:(dispatch_group_t)dispatchGroup\n'
+                         '                                lazilyDiscovered:(BOOL)lazilyDiscovered;\n')
+          if source.count(anchor) != 1:
+              raise SystemExit('Unexpected RCTCxxBridge.mm private interface')
+          bridge.write_text(source.replace(anchor, anchor + declaration))
           PY
       - name: Provide app API keys for bundling
         shell: bash
