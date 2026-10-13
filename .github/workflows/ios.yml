@@ -68,6 +68,11 @@ jobs:
                   raise SystemExit('Unexpected RNFS podspec layout')
               spec = spec[:terminator] + "\n  s.dependency 'React-RCTImage'" + spec[terminator:]
               rnfs.write_text(spec)
+          numbers = Path('node_modules/bignumber.js/bignumber.js')
+          source = numbers.read_text()
+          source = source.replace("require('crypto')", 'global.crypto')
+          source = source.replace("require('react-native-crypto')", 'global.crypto')
+          numbers.write_text(source)
           PY
       - uses: actions/cache/save@v4
         if: steps.npm-cache.outputs.cache-hit != 'true'
