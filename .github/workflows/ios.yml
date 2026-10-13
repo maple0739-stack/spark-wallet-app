@@ -1,0 +1,120 @@
+name: iOS ad-hoc IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install JavaScript dependencies
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          lock_path = Path('package-lock.json')
+          lock = json.loads(lock_path.read_text())
+          def fix_dependencies(dependencies):
+              for name, item in dependencies.items():
+                  resolved = item.get('resolved', '')
+                  if 'registry.npm.taobao.org/' in resolved:
+                      filename = name.rsplit('/', 1)[-1] + '-' + item['version'] + '.tgz'
+                      item['resolved'] = f'https://registry.npmjs.org/{name}/-/{filename}'
+                  fix_dependencies(item.get('dependencies', {}))
+          fix_dependencies(lock['dependencies'])
+          lock_path.write_text(json.dumps(lock, ensure_ascii=False, indent=2) + '\n')
+          PY
+          npm ci --legacy-peer-deps
+      - name: Provide app API keys for bundling
+        shell: bash
+        env:
+          AVE_API_KEY: ${{ secrets.AVE_API_KEY }}
+          NODEREAL_API_KEY: ${{ secrets.NODEREAL_API_KEY }}
+          TRONGRID_API_KEY: ${{ secrets.TRONGRID_API_KEY }}
+          TRON_PRO_API_KEY: ${{ secrets.TRON_PRO_API_KEY }}
+          TRON_PRIVATE_KEY: ${{ secrets.TRON_PRIVATE_KEY }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          names = ('AVE_API_KEY', 'NODEREAL_API_KEY', 'TRONGRID_API_KEY', 'TRON_PRO_API_KEY', 'TRON_PRIVATE_KEY', 'ETHERSCAN_API_KEY')
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Missing API key secrets: ' + ', '.join(missing))
+          config = Path('src/config/privateApiKeys.js')
+          config.parent.mkdir(parents=True, exist_ok=True)
+          config.write_text(''.join(f'export const {name} = {json.dumps(os.environ[name])};\n' for name in names))
+          PY
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods -v 1.15.2 --no-document
+          cd ios && pod install --repo-update
+      - name: Install signing credentials
+        shell: bash
+        env:
+          IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          : "${IOS_P12_BASE64:?Missing IOS_P12_BASE64}"
+          : "${IOS_P12_PASSWORD:?Missing IOS_P12_PASSWORD}"
+          : "${IOS_PROFILE_BASE64:?Missing IOS_PROFILE_BASE64}"
+          printf '%s' "$IOS_P12_BASE64" | base64 -D > "$RUNNER_TEMP/distribution.p12"
+          printf '%s' "$IOS_PROFILE_BASE64" | base64 -D > "$RUNNER_TEMP/profile.mobileprovision"
+          security create-keychain -p "$RUNNER_TEMP" "$RUNNER_TEMP/build.keychain-db"
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/build.keychain-db"
+          security unlock-keychain -p "$RUNNER_TEMP" "$RUNNER_TEMP/build.keychain-db"
+          security import "$RUNNER_TEMP/distribution.p12" -k "$RUNNER_TEMP/build.keychain-db" -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$RUNNER_TEMP" "$RUNNER_TEMP/build.keychain-db"
+          security list-keychains -d user -s "$RUNNER_TEMP/build.keychain-db"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/1c2cdd5e-7c52-40ed-b0b6-d2f7b9081f2b.mobileprovision"
+      - name: Archive and export IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -workspace ios/AwesomeProject.xcworkspace \
+            -scheme AwesomeProject -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/AwesomeProject.xcarchive" \
+            CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=W6V495HVH3 \
+            PROVISIONING_PROFILE_SPECIFIER='00008020-000B25561A78003A24' \
+            archive
+          python3 - <<'PY'
+          import os, plistlib
+          options = {
+              'method': 'ad-hoc',
+              'signingStyle': 'manual',
+              'teamID': 'W6V495HVH3',
+              'provisioningProfiles': {'wb.uniusc7615.tool6': '00008020-000B25561A78003A24'},
+          }
+          with open(os.path.join(os.environ['RUNNER_TEMP'], 'ExportOptions.plist'), 'wb') as output:
+              plistlib.dump(options, output)
+          PY
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/AwesomeProject.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa"
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spark-ios-1.0.2-9
+          path: ${{ runner.temp }}/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove signing credentials
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/profile.mobileprovision"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/1c2cdd5e-7c52-40ed-b0b6-d2f7b9081f2b.mobileprovision"
