@@ -15,6 +15,7 @@ module.exports = {
       stream: require.resolve('stream-browserify'),
       url: require.resolve('url/'),
       util: require.resolve('util/'),
+      'xhr2-cookies': require.resolve('./src/shims/xhr2-cookies'),
     },
   },
   transformer: {
