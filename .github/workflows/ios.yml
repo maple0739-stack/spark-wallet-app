@@ -127,6 +127,8 @@ jobs:
           cp "$RUNNER_TEMP/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/1c2cdd5e-7c52-40ed-b0b6-d2f7b9081f2b.mobileprovision"
       - name: Archive and export IPA
         shell: bash
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           set -euo pipefail
           ulimit -n 16384 || ulimit -n 8192
