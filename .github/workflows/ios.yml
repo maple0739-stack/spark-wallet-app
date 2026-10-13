@@ -62,10 +62,12 @@ jobs:
           bridge.write_text(source.replace(anchor, anchor + declaration))
           rnfs = Path('node_modules/react-native-fs/RNFS.podspec')
           spec = rnfs.read_text()
-          dependency = "  s.dependency 'React'\n"
-          if spec.count(dependency) != 1:
-              raise SystemExit('Unexpected RNFS pod dependencies')
-          rnfs.write_text(spec.replace(dependency, dependency + "  s.dependency 'React-RCTImage'\n"))
+          if "s.dependency 'React-RCTImage'" not in spec:
+              terminator = spec.rfind('\nend')
+              if terminator < 0:
+                  raise SystemExit('Unexpected RNFS podspec layout')
+              spec = spec[:terminator] + "\n  s.dependency 'React-RCTImage'" + spec[terminator:]
+              rnfs.write_text(spec)
           PY
       - uses: actions/cache/save@v4
         if: steps.npm-cache.outputs.cache-hit != 'true'
