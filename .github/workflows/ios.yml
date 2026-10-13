@@ -95,6 +95,10 @@ jobs:
           config.parent.mkdir(parents=True, exist_ok=True)
           config.write_text(''.join(f'export const {name} = {json.dumps(os.environ[name])};\n' for name in names))
           PY
+      - name: Install Watchman for Metro
+        shell: bash
+        run: |
+          command -v watchman >/dev/null || brew install watchman
       - name: Install CocoaPods
         run: |
           sed -i '' 's/CURRENT_ARCH="armv7"/CURRENT_ARCH="arm64"/' node_modules/react-native/scripts/ios-configure-glog.sh
@@ -125,6 +129,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ulimit -n 16384 || ulimit -n 8192
           xcodebuild -workspace ios/AwesomeProject.xcworkspace \
             -scheme AwesomeProject -configuration Release \
             -destination 'generic/platform=iOS' \
