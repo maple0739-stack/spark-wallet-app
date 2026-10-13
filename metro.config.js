@@ -6,6 +6,17 @@
  */
 
 module.exports = {
+  resolver: {
+    extraNodeModules: {
+      assert: require.resolve('assert/'),
+      events: require.resolve('events/'),
+      path: require.resolve('path-browserify'),
+      querystring: require.resolve('querystring/'),
+      stream: require.resolve('stream-browserify'),
+      url: require.resolve('url/'),
+      util: require.resolve('util/'),
+    },
+  },
   transformer: {
     getTransformOptions: async () => ({
       transform: {
