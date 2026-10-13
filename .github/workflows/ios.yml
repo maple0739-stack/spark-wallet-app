@@ -13,6 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
+      - uses: actions/cache/restore@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: legacy-rn060-npm-cache-v1
       - name: Install JavaScript dependencies
         shell: bash
         run: |
@@ -55,7 +60,18 @@ jobs:
           if corrected not in source:
               raise SystemExit('Unexpected RCTCxxBridge.mm implementation signature')
           bridge.write_text(source.replace(anchor, anchor + declaration))
+          rnfs = Path('node_modules/react-native-fs/RNFS.podspec')
+          spec = rnfs.read_text()
+          dependency = "  s.dependency 'React'\n"
+          if spec.count(dependency) != 1:
+              raise SystemExit('Unexpected RNFS pod dependencies')
+          rnfs.write_text(spec.replace(dependency, dependency + "  s.dependency 'React-RCTImage'\n"))
           PY
+      - uses: actions/cache/save@v4
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.npm
+          key: legacy-rn060-npm-cache-v1
       - name: Provide app API keys for bundling
         shell: bash
         env:
