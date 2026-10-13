@@ -9,7 +9,7 @@ import Tx from 'ethereumjs-tx';
 import Web3 from 'web3';
 const BigNumber = require('bignumber.js');
 let Wallet = ethers.Wallet;
-import TronWebLink from "tronweb";
+import TronWebLink from "tronweb/dist/TronWeb";
 import { TRON_PRO_API_KEY, TRON_PRIVATE_KEY } from "../config/privateApiKeys";
 let TronWebs = new TronWebLink({
     fullHost: 'https://api.trongrid.io',
