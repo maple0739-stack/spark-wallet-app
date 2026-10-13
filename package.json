@@ -10,6 +10,7 @@
   "dependencies": {
     "@ethersproject/shims": "^5.6.0",
     "axios": "^0.19.0",
+    "assert": "1.5.1",
     "ethereumjs-tx": "^2.1.0",
     "ethers": "^4.0.37",
     "react": "16.8.6",

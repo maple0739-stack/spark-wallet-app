@@ -6,7 +6,7 @@ import "react-native-get-random-values"
 import "@ethersproject/shims"
 import { ethers } from 'ethers';
 import Tx from 'ethereumjs-tx';
-import Web3 from 'web3';
+import Web3 from 'web3/dist/web3';
 const BigNumber = require('bignumber.js');
 let Wallet = ethers.Wallet;
 import TronWebLink from "tronweb/dist/TronWeb";
