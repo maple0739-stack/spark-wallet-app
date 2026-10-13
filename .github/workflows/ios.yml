@@ -49,6 +49,11 @@ jobs:
                          '                                lazilyDiscovered:(BOOL)lazilyDiscovered;\n')
           if source.count(anchor) != 1:
               raise SystemExit('Unexpected RCTCxxBridge.mm private interface')
+          signature = '- (NSArray<RCTModuleData *> *)_initializeModules:(NSArray<id<RCTBridgeModule>> *)modules'
+          corrected = '- (NSArray<RCTModuleData *> *)_initializeModules:(NSArray<Class> *)modules'
+          source = source.replace(signature, corrected)
+          if corrected not in source:
+              raise SystemExit('Unexpected RCTCxxBridge.mm implementation signature')
           bridge.write_text(source.replace(anchor, anchor + declaration))
           PY
       - name: Provide app API keys for bundling
