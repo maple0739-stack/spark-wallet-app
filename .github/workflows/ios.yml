@@ -32,6 +32,16 @@ jobs:
           lock_path.write_text(json.dumps(lock, ensure_ascii=False, indent=2) + '\n')
           PY
           npm install --legacy-peer-deps --no-audit --no-fund
+          python3 - <<'PY'
+          from pathlib import Path
+          yoga = Path('node_modules/react-native/ReactCommon/yoga/yoga/Yoga.cpp')
+          source = yoga.read_text()
+          old = 'node->getLayout().hadOverflow |\n'
+          if old in source:
+              yoga.write_text(source.replace(old, 'node->getLayout().hadOverflow ||\n'))
+          elif 'node->getLayout().hadOverflow ||' not in source:
+              raise SystemExit('Unexpected Yoga.cpp layout overflow expression')
+          PY
       - name: Provide app API keys for bundling
         shell: bash
         env:
