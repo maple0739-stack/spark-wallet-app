@@ -31,7 +31,7 @@ jobs:
           fix_dependencies(lock['dependencies'])
           lock_path.write_text(json.dumps(lock, ensure_ascii=False, indent=2) + '\n')
           PY
-          npm ci --legacy-peer-deps
+          npm install --legacy-peer-deps --no-audit --no-fund
       - name: Provide app API keys for bundling
         shell: bash
         env:
